@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>悠途运营后台</title><link rel="stylesheet" href="/styles.css"><script type="module" src="/admin.js"></script></head>
+<body><main class="stack"><div class="section-head"><h1>悠途运营后台</h1><a href="/">返回悠途</a></div>
+<form id="login" class="panel stack"><label>运营访问令牌<input type="password" name="token" required></label><button>查看运营概览</button></form>
+<p role="status" id="status"></p><section class="stack" id="dashboard" hidden><div class="grid" id="counts"></div>
+<form id="queue" class="panel stack"><h2>新建采集任务</h2><label>文旅部正式公告网址<input type="url" name="url" required></label><button>加入任务队列</button><button type="button" id="refresh" class="secondary">刷新状态</button></form>
+<form id="evidence" class="panel stack"><h2>景区证据与评分</h2><div class="form-grid">
+<label>景区<select name="id" required></select></label><label>指标<select name="field" required></select></label>
+<label>评估值（0–100）<input name="value" type="number" min="0" max="100" required></label>
+<label>证据状态<select name="status"><option>VERIFIED</option><option>PARTIAL</option><option>INFERRED</option><option>UNKNOWN</option></select></label>
+<label>证据网址<input name="source" type="url" required></label></div><button>保存并重算</button><ul id="evidence-list"></ul></form>
+<section class="panel stack"><h2>采集任务</h2><div id="jobs"></div></section>
+<section class="panel stack"><h2>执行日志</h2><ul id="logs"></ul></section>
+<section class="panel stack"><h2>内部来源</h2><ul id="sources"></ul></section></section></main></body></html>

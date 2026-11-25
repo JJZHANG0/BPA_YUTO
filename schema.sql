@@ -1,0 +1,15 @@
+PRAGMA foreign_keys=ON;
+PRAGMA journal_mode=WAL;
+CREATE TABLE IF NOT EXISTS provinces(name TEXT PRIMARY KEY);
+CREATE TABLE IF NOT EXISTS cities(province TEXT REFERENCES provinces, name TEXT, PRIMARY KEY(province,name));
+CREATE TABLE IF NOT EXISTS attractions(id TEXT PRIMARY KEY, name TEXT NOT NULL, province TEXT, city TEXT, grade TEXT, category TEXT, lat REAL, lon REAL, updated TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE(province,city,name), FOREIGN KEY(province,city) REFERENCES cities(province,name), CHECK(lat BETWEEN -90 AND 90), CHECK(lon BETWEEN -180 AND 180));
+CREATE TABLE IF NOT EXISTS sources(url TEXT PRIMARY KEY, fetched TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS evidence(attraction TEXT REFERENCES attractions, field TEXT, value TEXT, status TEXT CHECK(status IN ('VERIFIED','PARTIAL','INFERRED','UNKNOWN')), source TEXT REFERENCES sources, updated TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(attraction,field,source));
+CREATE TABLE IF NOT EXISTS images(id INTEGER PRIMARY KEY, attraction TEXT REFERENCES attractions, path TEXT, source TEXT REFERENCES sources, license TEXT, author TEXT, UNIQUE(attraction,path));
+CREATE TABLE IF NOT EXISTS jobs(id INTEGER PRIMARY KEY, url TEXT REFERENCES sources, state TEXT DEFAULT 'PENDING', attempts INTEGER DEFAULT 0, progress INTEGER DEFAULT 0, updated TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE UNIQUE INDEX IF NOT EXISTS active_jobs ON jobs(url) WHERE state IN ('PENDING','RUNNING','RETRYING','PAUSED');
+CREATE TABLE IF NOT EXISTS logs(job INTEGER REFERENCES jobs, message TEXT, created TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS analyses(attraction TEXT REFERENCES attractions, version TEXT, result TEXT, created TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(attraction,version));
+CREATE TABLE IF NOT EXISTS reviews(id INTEGER PRIMARY KEY, attraction TEXT REFERENCES attractions, body TEXT, approved INTEGER DEFAULT 0);
+CREATE INDEX IF NOT EXISTS attraction_geo ON attractions(lat,lon);
+CREATE INDEX IF NOT EXISTS attraction_name ON attractions(name);
