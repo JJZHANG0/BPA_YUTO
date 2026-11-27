@@ -65,13 +65,13 @@ struct HomeView: View {
                     .clipShape(RoundedRectangle(cornerRadius: YutoTheme.round))
                 HStack(alignment: .center, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(place.shortName).font(.title2.weight(.semibold))
+                        Text(place.shortName).font(.title2.weight(.semibold)).foregroundStyle(YutoTheme.ink)
                         if let caption = place.scoreCaption {
                             Text(caption).font(.subheadline).foregroundStyle(YutoTheme.muted)
                         }
                     }
                     Spacer(minLength: 8)
-                    Image(systemName: "arrow.up.right").font(.body.weight(.medium)).accessibilityHidden(true)
+                    Image(systemName: "arrow.up.right").font(.body.weight(.medium)).foregroundStyle(YutoTheme.sage).accessibilityHidden(true)
                 }
             }
         }
@@ -85,7 +85,11 @@ struct HomeView: View {
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("点亮中国").font(.headline)
+                    Label {
+                        Text("点亮中国").font(.headline)
+                    } icon: {
+                        Image(systemName: "sun.max.fill").foregroundStyle(YutoTheme.amberInk)
+                    }
                     Text("已走过 \(visitedCount) / \(catalog.provinces.count) 个省级地区")
                         .font(.subheadline).foregroundStyle(YutoTheme.muted)
                 }
@@ -98,7 +102,7 @@ struct HomeView: View {
             .padding(13)
             .frame(minHeight: 58)
             .foregroundStyle(YutoTheme.ink)
-            .background(YutoTheme.mist, in: RoundedRectangle(cornerRadius: YutoTheme.round))
+            .background(YutoTheme.amberSurface, in: RoundedRectangle(cornerRadius: YutoTheme.round))
         }
         .buttonStyle(.plain)
         .accessibilityHint("打开省份目录。标记行程完成后点亮对应地区。")

@@ -9,8 +9,16 @@ struct ProfileView: View {
         @Bindable var store = store
         Form {
             Section {
-                YutoScreenTitle(title: store.profile.nickname.isEmpty ? "我的悠途" : store.profile.nickname)
-                    .padding(.vertical, 6)
+                VStack(alignment: .leading, spacing: 8) {
+                    YutoArtwork(name: "YutoBrand")
+                        .frame(width: 144, height: 69, alignment: .leading)
+                        .blendMode(.multiply)
+                        .accessibilityHidden(false)
+                        .accessibilityLabel("悠途")
+                    if !store.profile.nickname.isEmpty {
+                        Text(store.profile.nickname).font(.title2.weight(.semibold))
+                    }
+                }.padding(.vertical, 8)
             }.listRowBackground(YutoTheme.paper)
             Section {
                 LabeledContent("昵称") {

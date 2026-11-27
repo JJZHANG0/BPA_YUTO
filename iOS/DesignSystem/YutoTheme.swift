@@ -1,15 +1,24 @@
 import SwiftUI
 
 enum YutoTheme {
-    static let ink = Color(white: 0.08)
-    static let sage = Color(red: 0.10, green: 0.27, blue: 0.23)
-    static let forest = Color(white: 0.10)
-    static let paper = Color.white
-    static let mist = Color(white: 0.958)
-    static let porcelain = Color.white
-    static let muted = Color(white: 0.34)
-    static let divider = Color(white: 0.89)
-    static let round: CGFloat = 12
+    static let ink = color(0x19312D)
+    static let sage = color(0x246B63)
+    static let forest = sage
+    static let paper = color(0xF7F5EF)
+    static let amber = color(0xD99045)
+    static let amberInk = color(0x814818)
+    static let amberSurface = color(0xF8E9D7)
+    static let mist = color(0xE7EFEA)
+    static let porcelain = color(0xFFFEFA)
+    static let muted = color(0x4E625D)
+    static let divider = color(0xD9E1DA)
+    static let round: CGFloat = 16
+
+    private static func color(_ rgb: UInt32) -> Color {
+        Color(red: Double((rgb >> 16) & 255) / 255,
+              green: Double((rgb >> 8) & 255) / 255,
+              blue: Double(rgb & 255) / 255)
+    }
 }
 
 struct YutoSection: View {
@@ -68,7 +77,8 @@ struct YutoSearchField: View {
         .padding(.leading, 14)
         .padding(.trailing, 8)
         .frame(minHeight: 52)
-        .background(YutoTheme.mist, in: RoundedRectangle(cornerRadius: 9))
+        .background(YutoTheme.porcelain, in: RoundedRectangle(cornerRadius: 9))
+        .overlay { RoundedRectangle(cornerRadius: 9).strokeBorder(YutoTheme.divider) }
 
     }
 }

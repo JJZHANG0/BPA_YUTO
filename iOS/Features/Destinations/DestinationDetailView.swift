@@ -15,7 +15,10 @@ struct DestinationDetailView: View {
                     .font(.subheadline).foregroundStyle(YutoTheme.muted)
                 YutoScreenTitle(title: place.name)
                 if let caption = place.scoreCaption {
-                    Text(caption).font(.subheadline.weight(.semibold)).foregroundStyle(YutoTheme.sage)
+                    Text(caption).font(.subheadline.weight(.semibold))
+                        .foregroundStyle(YutoTheme.amberInk)
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(YutoTheme.amberSurface, in: Capsule())
                 }
             }
             DestinationGallery(place: place)
@@ -84,8 +87,8 @@ private struct DestinationVisitTags: View {
         }
 
         let choices: [(String, Tag)] = [
-            ("步行及体力负担", Tag(title: walking, icon: "figure.walk", color: Color(red: 0.86, green: 0.94, blue: 0.88))),
-            ("休息设施", Tag(title: "预留休息", icon: "cup.and.saucer", color: Color(red: 0.98, green: 0.91, blue: 0.78))),
+            ("步行及体力负担", Tag(title: walking, icon: "figure.walk", color: YutoTheme.mist)),
+            ("休息设施", Tag(title: "预留休息", icon: "cup.and.saucer", color: YutoTheme.amberSurface)),
             ("交通便利性", Tag(title: "查返程交通", icon: "bus", color: Color(red: 0.87, green: 0.93, blue: 0.99))),
             ("无障碍便利性", Tag(title: "询问无障碍路线", icon: "figure.roll", color: Color(red: 0.94, green: 0.89, blue: 0.98)))
         ]
