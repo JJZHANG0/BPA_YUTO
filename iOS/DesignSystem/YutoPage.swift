@@ -5,10 +5,10 @@ struct YutoPage<Content: View>: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24, content: content)
+            VStack(alignment: .leading, spacing: 18, content: content)
                 .frame(maxWidth: 720)
-                .padding(.horizontal, 22)
-                .padding(.top, 8)
+                .padding(.horizontal, 18)
+                .padding(.top, 12)
                 .padding(.bottom, 40)
                 .frame(maxWidth: .infinity)
         }

@@ -35,6 +35,8 @@ struct TravelCoreChecks {
         precondition(catalog.visitedProvinces(in: store.trips) == ["浙江"])
         precondition(first.shortName == "杭州西湖" && first.scoreCaption == "AI预估 86 分")
         var edited = store.trips[0]
+        store.addCompanion(name: " 妈妈 ", role: "家人")
+        store.addFamilyNote(" 午后休息 ", to: edited.id)
         edited.origin = "北京"
         store.saveTrip(edited)
 
@@ -46,9 +48,38 @@ struct TravelCoreChecks {
         if let review = reopened.reviews.first { reopened.deleteReview(review.id) }
         precondition(TravelStore(catalog: catalog, preferences: preferences).reviews.isEmpty)
         precondition(reopened.profile.nickname == "悠途测试")
+        precondition(reopened.companions.map(\.name) == ["妈妈"])
+        precondition(reopened.trips[0].familyNotes?.map(\.text) == ["午后休息"])
+        if let note = reopened.trips[0].familyNotes?.first, let person = reopened.companions.first {
+            reopened.removeFamilyNote(note.id, from: reopened.trips[0].id)
+            reopened.removeCompanion(person.id)
+        }
+        let afterRemoval = TravelStore(catalog: catalog, preferences: preferences)
+        precondition(afterRemoval.trips[0].familyNotes?.isEmpty == true && afterRemoval.companions.isEmpty)
         precondition(reopened.favorites == [first.id])
         precondition(reopened.trips[0].complete && reopened.trips[0].itinerary == saved)
+        let base = reopened.trips[0]
+        var preview = base
+        preview.days = 3
+        preview.slow = false
+        preview.itinerary = TripPlanner.plan(preview, catalog: catalog, profile: reopened.profile)
+        reopened.addExpense(label: "车票", amount: "0", to: base.id)
+        reopened.addExpense(label: "车票", amount: "25.001", to: base.id)
+        reopened.addExpense(label: "车票", amount: "25.40", to: base.id)
+        reopened.addFamilyNote("午饭在湖边", to: base.id)
+        var changed = base
+        changed.people = 3
+        reopened.saveTrip(changed)
+        precondition(reopened.applyOptimization(preview, replacing: base))
+        precondition(!reopened.applyOptimization(preview, replacing: base))
+        let optimized = TravelStore(catalog: catalog, preferences: preferences).trips[0]
+        precondition(optimized.id == base.id && optimized.days == 3 && !optimized.slow)
+        precondition(optimized.origin == base.origin && optimized.date == base.date && optimized.people == 3)
+        precondition(optimized.expenses?.map(\.cents) == [2540] && optimized.familyNotes?.first?.text == "午饭在湖边")
+        reopened.removeExpense(optimized.expenses![0].id, from: base.id)
+        precondition(TravelStore(catalog: catalog, preferences: preferences).trips[0].expenses?.isEmpty == true)
         reopened.deleteTrip(trip.id)
+        precondition(!reopened.applyOptimization(preview, replacing: base))
         precondition(TravelStore(catalog: catalog, preferences: preferences).trips.isEmpty)
 
         preferences.save([trip], for: .trips)

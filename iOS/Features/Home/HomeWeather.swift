@@ -146,37 +146,41 @@ struct HomeWeatherBar: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 8) {
-            Menu {
-                Button("使用当前位置", systemImage: "location") { usesLocation = true; weather.locate() }
-                ForEach(WeatherCity.options) { option in
-                    Button(option.id) {
-                        usesLocation = false
-                        preferred = option.id
-                        weather.load(option)
-                    }
+        Menu {
+            Button("使用当前位置", systemImage: "location") {
+                usesLocation = true
+                weather.locate()
+            }
+            ForEach(WeatherCity.options) { option in
+                Button(option.id) {
+                    usesLocation = false
+                    preferred = option.id
+                    weather.load(option)
                 }
-                Button("刷新天气", systemImage: "arrow.clockwise") { weather.load(city) }
-                Link("天气由 Open-Meteo 提供", destination: URL(string: "https://open-meteo.com/")!)
-            } label: {
-                Label(city.id, systemImage: "location.fill")
-                    .font(.headline)
-                    .frame(minHeight: 44)
             }
-            .accessibilityLabel("天气城市，\(city.id)")
-            Spacer(minLength: 4)
-            if weather.locating {
-                Text("正在定位").font(.subheadline)
-            } else if let message = weather.message {
-                Text(message).font(.subheadline).foregroundStyle(YutoTheme.muted)
-            } else if let reading = weather.reading {
-                Label("\(Int(reading.temperature_2m.rounded()))°  \(reading.description)", systemImage: reading.symbol)
-                    .font(.subheadline.weight(.semibold))
-            } else {
-                Text("天气更新中").font(.subheadline).foregroundStyle(YutoTheme.muted)
+            if let message = weather.message { Text(message) }
+            Button("刷新天气", systemImage: "arrow.clockwise") { weather.load(city) }
+            Link("天气由 Open-Meteo 提供", destination: URL(string: "https://open-meteo.com/")!)
+        } label: {
+            VStack(alignment: .trailing, spacing: 4) {
+                HStack(spacing: 4) {
+                    Image(systemName: "location.fill").font(.caption2)
+                    Text(city.id)
+                    Image(systemName: "chevron.down").font(.caption2)
+                }
+                .font(.subheadline.weight(.semibold))
+                if weather.locating {
+                    Text("正在定位").font(.footnote)
+                } else if let reading = weather.reading {
+                    Label("\(Int(reading.temperature_2m.rounded()))° · \(reading.description)", systemImage: reading.symbol)
+                        .font(.footnote).foregroundStyle(YutoTheme.muted)
+                }
             }
+            .frame(minWidth: 44, minHeight: 44)
         }
-        .foregroundStyle(YutoTheme.ink)
+        .foregroundStyle(YutoTheme.sage)
+        .accessibilityLabel("天气城市，\(city.id)")
+        .accessibilityValue(weather.reading.map { "\(Int($0.temperature_2m.rounded()))度，\($0.description)" } ?? weather.message ?? "正在更新")
         .task { weather.load(city) }
         .onChange(of: weather.currentCity) { _, _ in if usesLocation { weather.load(city) } }
     }

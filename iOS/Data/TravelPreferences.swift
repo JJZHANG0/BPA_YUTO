@@ -8,6 +8,7 @@ struct TravelPreferences {
         case trips = "yuto.native.trips"
         case reviews = "yuto.native.destinationReviews"
         case favorites = "yuto.native.favorites"
+        case companions = "yuto.native.companions"
     }
 
     func load<Value: Decodable>(_ key: Key, default fallback: Value) -> Value {

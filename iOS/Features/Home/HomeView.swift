@@ -6,106 +6,158 @@ struct HomeView: View {
     @Binding var query: String
     let search: () -> Void
     let plan: () -> Void
-    @Environment(\.dynamicTypeSize) private var typeSize
+    let trips: () -> Void
+    let family: () -> Void
+    let profile: () -> Void
+    let provinces: () -> Void
 
-    private var highlights: [Destination] {
-        catalog.attractions.filter { $0.featuredArtwork != nil }
-            .sorted { ($0.previewScore ?? 0) > ($1.previewScore ?? 0) }
+    @Environment(TravelStore.self) private var store
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @FocusState private var searching: Bool
+
+    private var greeting: String {
+        let welcome: String
+        switch Calendar.current.component(.hour, from: .now) {
+        case 5..<11: welcome = "早上好"
+        case 11..<14: welcome = "中午好"
+        case 14..<18: welcome = "下午好"
+        default: welcome = "晚上好"
+        }
+        let name = store.profile.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? welcome : "\(welcome)，\(name)"
     }
 
     var body: some View {
         YutoPage {
-            VStack(alignment: .leading, spacing: 12) {
-                HomeWeatherBar()
-                YutoScreenTitle(title: "今天，想去哪里走走？")
-                searchRow
-            }
-
-            if let first = highlights.first, let photo = first.featuredArtwork {
-                featured(first, photo: photo)
-            }
-
-            exploreLink
-
-            if highlights.count > 1 {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        YutoSection(title: "精选目的地")
-                        Spacer(minLength: 6)
-                        Button("规划行程", action: plan)
-                            .font(.subheadline.weight(.semibold)).frame(minHeight: 44)
+            VStack(alignment: .leading, spacing: 11) {
+                let header = typeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+                    : AnyLayout(HStackLayout(alignment: .center, spacing: 8))
+                header {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(greeting)
+                            .font(.system(.largeTitle, design: .serif, weight: .bold))
+                            .accessibilityAddTraits(.isHeader)
+                        Text("今天想去哪里旅行？")
+                            .font(.body).foregroundStyle(YutoTheme.muted)
                     }
-                    ForEach(highlights.dropFirst()) { place in
-                        Divider()
-                        DestinationLink(place: place)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    HomeWeatherBar()
+                }
+                HStack(spacing: 8) {
+                    YutoSearchField(query: $query, hint: "搜索目的地、景点或玩法", onSubmit: submit)
+                        .focused($searching)
+                    if searching || !query.isEmpty {
+                        Button("搜索", action: submit)
+                            .font(.headline).fixedSize(horizontal: true, vertical: false)
+                            .frame(minWidth: 44, minHeight: 44)
                     }
                 }
             }
+
+            Button(action: plan) {
+                HStack(alignment: .center, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "sparkles")
+                                .font(.subheadline).foregroundStyle(YutoTheme.amberSurface)
+                            Text("AI 智能规划旅行")
+                                .font(.system(.title3, design: .serif, weight: .bold))
+                        }
+                        Text("说说您的想法，一起安排行程")
+                            .font(.subheadline).foregroundStyle(.white.opacity(0.95))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    if !typeSize.isAccessibilitySize {
+                        YutoAssistantMark().frame(width: 70, height: 70).accessibilityHidden(true)
+                    }
+                }
+                .padding(.leading, 18).padding(.trailing, 12).padding(.vertical, 10)
+                .frame(minHeight: 94)
+                .foregroundStyle(.white)
+                .background {
+                    YutoPhoto(name: "WelcomeLake")
+                        .overlay(LinearGradient(colors: [YutoTheme.forest, YutoTheme.forest.opacity(0.95),
+                                                         YutoTheme.forest.opacity(0.60)],
+                                                startPoint: .leading, endPoint: .trailing))
+                        .allowsHitTesting(false)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: YutoTheme.round))
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("home-planner")
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    YutoSection(title: "为您推荐")
+                    Spacer()
+                    Button {
+                        query = ""
+                        submit()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("查看更多")
+                            Image(systemName: "chevron.right").font(.caption)
+                        }
+                        .font(.subheadline.weight(.medium)).frame(minHeight: 44)
+                    }
+                }
+                let columns = Array(repeating: GridItem(.flexible(), spacing: 12),
+                                    count: typeSize.isAccessibilitySize ? 1 : 2)
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(["WestLake", "SuzhouGarden"], id: \.self) { image in
+                        if let place = catalog.attractions.first(where: { $0.featuredArtwork == image }) {
+                            ScenicDestinationCard(place: place, caption: image == "WestLake" ? "烟波湖光 · 湖畔漫步" : "亭台水榭 · 江南园林")
+                        }
+                    }
+                }
+            }
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8),
+                                     count: typeSize.isAccessibilitySize ? 2 : 4), spacing: 12) {
+                shortcut("AI 规划", symbol: "sparkles", action: plan)
+                shortcut("行程管理", symbol: "calendar", action: trips)
+                shortcut("家人协作", symbol: "person.2", action: family)
+                shortcut("旅行偏好", symbol: "heart", action: profile)
+            }
+            Button(action: provinces) {
+                HStack(spacing: 10) {
+                    YutoArtwork(name: "ExplorationMap")
+                        .frame(width: 68, height: 56)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("点亮中国").font(.headline)
+                        Text("已走过 \(visitedCount) / \(catalog.provinces.count) 个省级地区")
+                            .font(.subheadline).foregroundStyle(YutoTheme.muted)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right").font(.footnote.weight(.medium))
+                }
+                .padding(.horizontal, 14).padding(.vertical, 6)
+                .foregroundStyle(YutoTheme.ink)
+                .background(YutoTheme.mist, in: RoundedRectangle(cornerRadius: YutoTheme.round))
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("explore-provinces")
         }
         .toolbar(.hidden, for: .navigationBar)
     }
 
-    private var searchRow: some View {
-        let layout = typeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
-            : AnyLayout(HStackLayout(spacing: 8))
-        return layout {
-            YutoSearchField(query: $query, hint: "城市或旅行需求", onSubmit: search)
-            Button("搜索", action: search).buttonStyle(YutoButtonStyle())
-        }
+    private func submit() {
+        searching = false
+        search()
     }
 
-    private func featured(_ place: Destination, photo: String) -> some View {
-        NavigationLink {
-            DestinationDetailView(place: place, query: "")
-        } label: {
-            VStack(alignment: .leading, spacing: 10) {
-                YutoPhoto(name: photo)
-                    .frame(height: 190)
-                    .clipShape(RoundedRectangle(cornerRadius: YutoTheme.round))
-                HStack(alignment: .center, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(place.shortName).font(.title2.weight(.semibold)).foregroundStyle(YutoTheme.ink)
-                        if let caption = place.scoreCaption {
-                            Text(caption).font(.subheadline).foregroundStyle(YutoTheme.muted)
-                        }
-                    }
-                    Spacer(minLength: 8)
-                    Image(systemName: "arrow.up.right").font(.body.weight(.medium)).foregroundStyle(YutoTheme.sage).accessibilityHidden(true)
-                }
+    private func shortcut(_ title: String, symbol: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 7) {
+                Image(systemName: symbol)
+                    .font(.title3.weight(.medium)).foregroundStyle(YutoTheme.sage)
+                    .frame(maxWidth: .infinity, minHeight: 45)
+                    .background(YutoTheme.porcelain, in: RoundedRectangle(cornerRadius: 14))
+                    .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(YutoTheme.divider) }
+                Text(title).font(.footnote.weight(.semibold)).foregroundStyle(YutoTheme.ink)
             }
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var exploreLink: some View {
-        Button {
-            query = ""
-            search()
-        } label: {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Label {
-                        Text("点亮中国").font(.headline)
-                    } icon: {
-                        Image(systemName: "sun.max.fill").foregroundStyle(YutoTheme.amberInk)
-                    }
-                    Text("已走过 \(visitedCount) / \(catalog.provinces.count) 个省级地区")
-                        .font(.subheadline).foregroundStyle(YutoTheme.muted)
-                }
-                Spacer(minLength: 4)
-                if !typeSize.isAccessibilitySize {
-                    YutoArtwork(name: "ExplorationMap").frame(width: 88, height: 46)
-                }
-                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).accessibilityHidden(true)
-            }
-            .padding(13)
-            .frame(minHeight: 58)
-            .foregroundStyle(YutoTheme.ink)
-            .background(YutoTheme.amberSurface, in: RoundedRectangle(cornerRadius: YutoTheme.round))
-        }
-        .buttonStyle(.plain)
-        .accessibilityHint("打开省份目录。标记行程完成后点亮对应地区。")
-        .accessibilityIdentifier("explore-provinces")
+        }.buttonStyle(.plain)
     }
 }

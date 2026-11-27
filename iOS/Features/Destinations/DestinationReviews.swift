@@ -12,34 +12,48 @@ struct DestinationReviews: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            YutoSection(title: "旅行评价", detail: "本机记录")
-            if reviews.isEmpty {
-                HStack(spacing: 10) {
-                    YutoArtwork(name: "TravelCase").frame(width: 72, height: 64)
-                    Text("去过这里？写下哪段路好走、哪里适合停下来歇一歇。")
-                        .font(.subheadline).foregroundStyle(YutoTheme.muted)
-                }
+            HStack(alignment: .center, spacing: 8) {
+                YutoSection(title: "旅行手记")
+                Spacer()
+                Button { composing = true } label: {
+                    Label("写评价", systemImage: "square.and.pencil")
+                        .font(.subheadline.weight(.semibold)).frame(minHeight: 44)
+                }.buttonStyle(.plain).foregroundStyle(YutoTheme.forest)
             }
-            Button { composing = true } label: {
-                Label("写评价", systemImage: "square.and.pencil").frame(maxWidth: .infinity)
-            }.buttonStyle(YutoButtonStyle(primary: false))
+            if reviews.isEmpty {
+                HStack(alignment: .center, spacing: 14) {
+                    Image(systemName: "book.pages")
+                        .font(.title2).foregroundStyle(YutoTheme.sage)
+                        .frame(width: 44, height: 48)
+                        .background(YutoTheme.mist, in: RoundedRectangle(cornerRadius: 12))
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("记下您的游览体验").font(.headline)
+                        Text("哪段路好走？哪里适合歇脚？把这些发现留在本机手记里。")
+                            .font(.subheadline).foregroundStyle(YutoTheme.muted)
+                    }
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(YutoTheme.porcelain, in: RoundedRectangle(cornerRadius: 16))
+            }
             ForEach(reviews) { review in
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("我的评价").font(.headline)
+                        Label("我的评价", systemImage: "person.crop.circle").font(.headline)
                         Spacer()
                         Button("删除评价", systemImage: "trash", role: .destructive) { removing = review }
                             .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
                     }
                     Label("\(review.rating) / 5", systemImage: "star.fill")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.subheadline.weight(.semibold)).foregroundStyle(YutoTheme.amberInk)
                     Text(review.text)
                     Text(review.date.formatted(date: .abbreviated, time: .omitted))
                         .font(.subheadline).foregroundStyle(YutoTheme.muted)
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(YutoTheme.mist, in: RoundedRectangle(cornerRadius: 16))
+                .background(YutoTheme.porcelain, in: RoundedRectangle(cornerRadius: 16))
             }
         }
         .sheet(isPresented: $composing) {
@@ -61,6 +75,8 @@ struct DestinationReviews: View {
                         Text("\(text.count) / 500 · 保存在这台设备")
                     }
                 }
+                .scrollContentBackground(.hidden)
+                .background(YutoTheme.paper)
                 .navigationTitle("写评价")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {

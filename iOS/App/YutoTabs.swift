@@ -1,10 +1,13 @@
 import SwiftUI
 
 struct YutoTabs: View {
+    private enum HomeRoute: Hashable { case planner, preferences }
+
     @Environment(TravelStore.self) private var store
     @State private var tab = Tab.home
     @State private var homeQuery = ""
     @State private var discoverQuery = ""
+    @State private var homePath = NavigationPath()
     @State private var discoverPath = NavigationPath()
     @State private var presentation = TripPresentation()
 
@@ -14,9 +17,17 @@ struct YutoTabs: View {
             if let catalog = store.catalog {
                 let visited = catalog.visitedProvinces(in: store.trips)
                 TabView(selection: $tab) {
-                    NavigationStack {
+                    NavigationStack(path: $homePath) {
                         HomeView(catalog: catalog, visitedCount: visited.count, query: $homeQuery,
-                                 search: searchFromHome, plan: { tab = .trips })
+                                 search: searchFromHome, plan: { homePath.append(HomeRoute.planner) },
+                                 trips: { tab = .trips }, family: { tab = .family },
+                                 profile: { homePath.append(HomeRoute.preferences) }, provinces: openProvinces)
+                            .navigationDestination(for: HomeRoute.self) { route in
+                                switch route {
+                                case .planner: PlannerView(catalog: catalog)
+                                case .preferences: ProfilePreferencesView()
+                                }
+                            }
                     }
                     .tabItem { Label(Tab.home.rawValue, systemImage: Tab.home.icon) }.tag(Tab.home)
                     NavigationStack(path: $discoverPath) {
@@ -25,6 +36,8 @@ struct YutoTabs: View {
                     .tabItem { Label(Tab.discover.rawValue, systemImage: Tab.discover.icon) }.tag(Tab.discover)
                     NavigationStack { TripsView(catalog: catalog) }
                         .tabItem { Label(Tab.trips.rawValue, systemImage: Tab.trips.icon) }.tag(Tab.trips)
+                    NavigationStack { FamilyView(catalog: catalog) }
+                        .tabItem { Label(Tab.family.rawValue, systemImage: Tab.family.icon) }.tag(Tab.family)
                     NavigationStack { ProfileView(catalog: catalog) }
                         .tabItem { Label(Tab.profile.rawValue, systemImage: Tab.profile.icon) }.tag(Tab.profile)
                 }
@@ -39,14 +52,18 @@ struct YutoTabs: View {
             }
         }
         .environment(presentation)
-        .tint(YutoTheme.sage)
-        .preferredColorScheme(.light)
-        .dynamicTypeSize(store.profile.largerText ? .xLarge ... .accessibility5 : .xSmall ... .accessibility5)
     }
 
     private func searchFromHome() {
         discoverPath = NavigationPath()
         discoverQuery = homeQuery
+        tab = .discover
+    }
+
+    private func openProvinces() {
+        discoverQuery = ""
+        discoverPath = NavigationPath()
+        discoverPath.append(ProvinceDirectoryRoute())
         tab = .discover
     }
 }

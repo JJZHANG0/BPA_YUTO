@@ -3,42 +3,42 @@ import SwiftUI
 struct DestinationLink: View {
     let place: Destination
     var query = ""
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         NavigationLink { DestinationDetailView(place: place, query: query) } label: {
             HStack(spacing: 12) {
-                thumbnail
+                if !typeSize.isAccessibilitySize {
+                    thumbnail
+                }
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(place.shortName).font(.headline)
+                    Text(typeSize.isAccessibilitySize ? place.name : place.shortName).font(.headline)
                         .accessibilityLabel(place.name)
-                    Text("\(place.city) · \(place.grade) 景区").font(.subheadline).foregroundStyle(YutoTheme.muted)
+                    Text("\(place.city) · \(place.grade) 景区")
+                        .font(.subheadline).foregroundStyle(YutoTheme.muted)
                     if let caption = place.scoreCaption {
-                        Text(caption).font(.subheadline.weight(.semibold)).foregroundStyle(YutoTheme.sage)
+                        Label(caption, systemImage: "star.fill")
+                            .font(.caption.weight(.semibold)).foregroundStyle(YutoTheme.amberInk)
                     }
                 }
                 Spacer(minLength: 4)
-                Image(systemName: "chevron.right").font(.footnote).accessibilityHidden(true)
+                Image(systemName: "chevron.right").font(.subheadline.weight(.medium))
+                    .foregroundStyle(YutoTheme.sage).accessibilityHidden(true)
             }
             .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
-            .padding(.vertical, 8)
+            .padding(10)
+            .background(YutoTheme.porcelain, in: RoundedRectangle(cornerRadius: 16))
+            .overlay { RoundedRectangle(cornerRadius: 16).strokeBorder(YutoTheme.divider) }
             .contentShape(.rect)
             .foregroundStyle(YutoTheme.ink)
         }.buttonStyle(.plain)
     }
 
-    @ViewBuilder
     private var thumbnail: some View {
-        if let name = place.featuredArtwork,
-           let url = Bundle.main.url(forResource: name, withExtension: "jpg"),
-           let image = UIImage(contentsOfFile: url.path) {
-            Image(uiImage: image).resizable().scaledToFill()
-                .frame(width: 76, height: 68)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .accessibilityHidden(true)
-        } else {
-            Image(systemName: "mountain.2").font(.title2).foregroundStyle(YutoTheme.sage)
-                .frame(width: 54, height: 54).background(YutoTheme.mist, in: RoundedRectangle(cornerRadius: 8))
-                .accessibilityHidden(true)
-        }
+        let provinceCover = ProvinceIllustration.photo(for: place.province)
+        return YutoPhoto(name: place.featuredArtwork ?? provinceCover.name,
+                         subdirectory: place.featuredArtwork == nil ? provinceCover.folder : nil)
+            .frame(width: 72, height: 66)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }

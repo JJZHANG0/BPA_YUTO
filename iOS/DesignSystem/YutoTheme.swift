@@ -8,7 +8,9 @@ enum YutoTheme {
     static let amber = color(0xD99045)
     static let amberInk = color(0x814818)
     static let amberSurface = color(0xF8E9D7)
-    static let mist = color(0xE7EFEA)
+    static let mist = color(0xE6F1EC)
+    static let greyGreen = color(0xC9D7CF)
+    static let neutralGreen = color(0x8FA39B)
     static let porcelain = color(0xFFFEFA)
     static let muted = color(0x4E625D)
     static let divider = color(0xD9E1DA)
@@ -27,7 +29,7 @@ struct YutoSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(title).font(.title2.bold()).accessibilityAddTraits(.isHeader)
+            Text(title).font(.system(.title2, design: .serif, weight: .bold)).accessibilityAddTraits(.isHeader)
             if let detail { Text(detail).font(.subheadline).foregroundStyle(YutoTheme.muted) }
         }
     }
@@ -46,7 +48,8 @@ struct YutoButtonStyle: ButtonStyle {
             .padding(.vertical, 10)
             .frame(minWidth: 44, minHeight: 48)
             .foregroundStyle(primary ? .white : YutoTheme.forest)
-            .background(primary ? YutoTheme.forest : YutoTheme.mist, in: RoundedRectangle(cornerRadius: 9))
+            .background(primary ? AnyShapeStyle(YutoTheme.forest.gradient) : AnyShapeStyle(YutoTheme.porcelain), in: Capsule())
+            .overlay { Capsule().strokeBorder(primary ? .clear : YutoTheme.greyGreen) }
             .opacity(!enabled ? 0.48 : configuration.isPressed ? 0.78 : 1)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: configuration.isPressed)
     }
@@ -77,8 +80,8 @@ struct YutoSearchField: View {
         .padding(.leading, 14)
         .padding(.trailing, 8)
         .frame(minHeight: 52)
-        .background(YutoTheme.porcelain, in: RoundedRectangle(cornerRadius: 9))
-        .overlay { RoundedRectangle(cornerRadius: 9).strokeBorder(YutoTheme.divider) }
+        .background(YutoTheme.porcelain, in: RoundedRectangle(cornerRadius: 14))
+        .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(YutoTheme.divider) }
 
     }
 }
@@ -88,8 +91,7 @@ struct YutoArtwork: View {
     var ext = "png"
 
     var body: some View {
-        if let url = Bundle.main.url(forResource: name, withExtension: ext),
-           let image = UIImage(contentsOfFile: url.path) {
+        if let image = UIImage(named: "\(name).\(ext)") {
             Image(uiImage: image).resizable().scaledToFit().accessibilityHidden(true)
         }
     }
@@ -101,7 +103,7 @@ struct YutoScreenTitle: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.largeTitle.weight(.semibold))
+            Text(title).font(.system(.largeTitle, design: .serif, weight: .bold))
                 .accessibilityAddTraits(.isHeader)
             if let subtitle {
                 Text(subtitle).font(.body).foregroundStyle(YutoTheme.muted)
@@ -117,8 +119,8 @@ struct YutoPhoto: View {
 
     var body: some View {
         GeometryReader { proxy in
-            if let url = Bundle.main.url(forResource: name, withExtension: "jpg", subdirectory: subdirectory),
-               let image = UIImage(contentsOfFile: url.path) {
+            let path = [subdirectory, "\(name).jpg"].compactMap { $0 }.joined(separator: "/")
+            if let image = UIImage(named: path) ?? UIImage(named: name) {
                 Image(uiImage: image).resizable().scaledToFill()
                     .frame(width: proxy.size.width, height: proxy.size.height)
             } else {
@@ -126,6 +128,14 @@ struct YutoPhoto: View {
             }
         }
         .clipped()
+        .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+}
+
+
+struct YutoAssistantMark: View {
+    var body: some View {
+        Image("TravelAssistant").resizable().scaledToFit().accessibilityHidden(true)
     }
 }
