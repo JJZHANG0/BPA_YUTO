@@ -8,11 +8,13 @@ struct Catalog: Decodable {
         attractions.first { $0.id == id }
     }
 
+    func provinces(in trip: Trip) -> Set<String> {
+        let stops = trip.itinerary?.compactMap(\.destinationID) ?? []
+        return Set(([trip.destination] + stops).compactMap { destination($0)?.province })
+    }
+
     func visitedProvinces(in trips: [Trip]) -> Set<String> {
-        Set(trips.filter(\.complete).flatMap { trip in
-            let ids = trip.itinerary?.compactMap(\.destinationID) ?? [trip.destination]
-            return ids.compactMap { destination($0)?.province }
-        })
+        Set(trips.filter(\.complete).flatMap { provinces(in: $0) })
     }
 
     func cities(in province: String) -> [String] {

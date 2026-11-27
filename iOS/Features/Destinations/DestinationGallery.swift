@@ -20,8 +20,7 @@ struct DestinationGallery: View {
     private var pictures: [URL] { [bundledPhoto].compactMap { $0 } + photoURLs }
 
     private var folder: URL {
-        URL.applicationSupportDirectory.appending(path: "DestinationAlbums", directoryHint: .isDirectory)
-            .appending(path: place.id, directoryHint: .isDirectory)
+        DestinationAlbumFiles.folder(for: place.id)
     }
 
     var body: some View {
@@ -73,7 +72,7 @@ struct DestinationGallery: View {
             defer { if !Task.isCancelled { pendingPhoto = nil } }
             do {
                 guard let data = try await item.loadTransferable(type: Data.self) else { throw CocoaError(.fileReadCorruptFile) }
-                let resized = Task.detached(priority: .userInitiated) { Self.thumbnailData(data) }
+                let resized = Task.detached(priority: .userInitiated) { AlbumImage.thumbnailData(data) }
                 guard let jpeg = await resized.value else { throw CocoaError(.fileReadCorruptFile) }
                 try Task.checkCancellation()
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -172,9 +171,7 @@ struct DestinationGallery: View {
     }
 
     private func reload() {
-        photoURLs = ((try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [])
-            .filter { $0.pathExtension == "jpg" }
-            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+        photoURLs = DestinationAlbumFiles.photos(for: place.id)
     }
 
     private func remove(_ url: URL) {
@@ -188,18 +185,7 @@ struct DestinationGallery: View {
         pendingRemoval = nil
     }
 
-    nonisolated private static func thumbnailData(_ input: Data) -> Data? {
-        guard let source = CGImageSourceCreateWithData(input as CFData, nil),
-              let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, [
-                kCGImageSourceCreateThumbnailFromImageAlways: true,
-                kCGImageSourceCreateThumbnailWithTransform: true,
-                kCGImageSourceThumbnailMaxPixelSize: 1400
-              ] as CFDictionary) else { return nil }
-        let output = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(output, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
-        CGImageDestinationAddImage(destination, thumbnail, [kCGImageDestinationLossyCompressionQuality: 0.82] as CFDictionary)
-        return CGImageDestinationFinalize(destination) ? output as Data : nil
-    }
+
 }
 
 private struct AlbumPhoto: View {

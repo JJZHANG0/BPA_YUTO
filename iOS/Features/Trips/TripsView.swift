@@ -5,6 +5,7 @@ struct TripsView: View {
     @Environment(TripPresentation.self) private var presentation
     @State private var selectedID: UUID?
     @State private var deleting: Trip?
+    @State private var showSavedRoutes = false
     @State private var section = 0
     let catalog: Catalog
 
@@ -17,6 +18,9 @@ struct TripsView: View {
             HStack {
                 YutoScreenTitle(title: "我的行程")
                 if !store.trips.isEmpty {
+                    Button { showSavedRoutes = true } label: {
+                        Image(systemName: "bookmark").frame(width: 44, height: 44)
+                    }.accessibilityLabel("查看收藏路线")
                     Button(action: start) {
                         Image(systemName: "plus").frame(width: 44, height: 44)
                             .background(YutoTheme.porcelain, in: Circle())
@@ -42,6 +46,15 @@ struct TripsView: View {
                     }
                     TravelCover(place: place, title: "\(place?.city ?? "旅行") · \(trip.days)日游",
                                 subtitle: trip.displayDates + "  ·  \(trip.people)人同行")
+                        .overlay(alignment: .topTrailing) {
+                            Button { store.toggleSavedRoute(trip.id) } label: {
+                                Image(systemName: trip.savedRoute == true ? "bookmark.fill" : "bookmark")
+                                    .font(.body.weight(.semibold)).foregroundStyle(.white)
+                                    .frame(width: 36, height: 36).background(.black.opacity(0.55), in: Circle())
+                                    .frame(width: 48, height: 48)
+                            }.buttonStyle(.plain)
+                            .accessibilityLabel(trip.savedRoute == true ? "取消收藏路线" : "收藏这条路线")
+                        }
                 }
                 Picker("行程视图", selection: $section) {
                     Text("行程安排").tag(0)
@@ -78,6 +91,15 @@ struct TripsView: View {
                             .background(YutoTheme.mist, in: Circle())
                     }.accessibilityLabel("更多行程操作")
                 }
+                VStack(spacing: 12) {
+                    NavigationLink { TripRemindersView(tripID: trip.id) } label: {
+                        TravelMenuRow(icon: "bell", title: "行程提醒", detail: "出发、集合、用餐与返程")
+                    }.buttonStyle(.plain).accessibilityIdentifier("trip-reminders")
+                    Divider()
+                    NavigationLink { TripAlbumView(tripID: trip.id) } label: {
+                        TravelMenuRow(icon: "photo.on.rectangle", title: "行程相册", detail: "留住沿途风景，分享给家人")
+                    }.buttonStyle(.plain).accessibilityIdentifier("trip-album")
+                }.travelPanel()
             } else {
                 TravelCover(place: nil, title: "下一程，慢慢走", subtitle: "从一个想去的地方开始。")
                 VStack(alignment: .leading, spacing: 14) {
@@ -97,7 +119,32 @@ struct TripsView: View {
         .navigationTitle("我的行程")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
-        .confirmationDialog("删除这份旅行计划？", isPresented: Binding(
+        .sheet(isPresented: $showSavedRoutes) {
+            NavigationStack {
+                List {
+                    let saved = store.trips.filter { $0.savedRoute == true }
+                    if saved.isEmpty {
+                        ContentUnavailableView("还没有收藏的路线", systemImage: "bookmark",
+                                               description: Text("点行程封面右上角的书签，下次就能从这里找到。"))
+                            .listRowBackground(Color.clear)
+                    }
+                    ForEach(saved) { trip in
+                        Button {
+                            selectedID = trip.id
+                            section = 0
+                            showSavedRoutes = false
+                        } label: {
+                            TravelMenuRow(icon: "bookmark.fill", title: catalog.destination(trip.destination)?.shortName ?? "旅行",
+                                          detail: trip.displayDates + " · \(trip.days) 天")
+                        }.buttonStyle(.plain)
+                    }
+                }
+                .scrollContentBackground(.hidden).background(YutoTheme.paper)
+                .navigationTitle("收藏路线").navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("关闭") { showSavedRoutes = false } } }
+            }
+        }
+        .confirmationDialog("删除这份行程和行程相册？", isPresented: Binding(
             get: { deleting != nil }, set: { if !$0 { deleting = nil } }
         ), titleVisibility: .visible, presenting: deleting) { trip in
             Button("删除", role: .destructive) { store.deleteTrip(trip.id) }
@@ -152,6 +199,22 @@ struct TripsView: View {
             LabeledContent("第一站", value: place?.name ?? "已保存的目的地")
             LabeledContent("出游节奏", value: trip.slow ? "多安排休息" : "常规节奏")
             LabeledContent("同行人数", value: "\(trip.people)人")
+            let days = trip.itinerary ?? []
+            let visits = days.filter { $0.destinationID != nil }.count
+            LabeledContent("安排强度", value: "\(visits) 天游览 · \(days.count - visits) 天自由活动")
+            if store.profile.shortWalk || store.profile.restOften {
+                Label("您已选择" + [store.profile.shortWalk ? "短距离步行" : nil, store.profile.restOften ? "常休息" : nil].compactMap { $0 }.joined(separator: "、"),
+                      systemImage: "figure.walk").font(.subheadline).foregroundStyle(YutoTheme.sage)
+            }
+            TravelReadButton(text: trip.shareSummary(catalog: catalog))
+            Divider()
+            Label("食宿安排", systemImage: "bed.double").font(.headline)
+            LabeledContent("饮食偏好", value: store.profile.dietPreference ?? "无特别偏好")
+            if let lodging = trip.lodgingPlan, !lodging.isEmpty { LabeledContent("住宿计划", value: lodging) }
+            if let meal = trip.mealPlan, !meal.isEmpty { LabeledContent("用餐计划", value: meal) }
+            Button { presentation.editing = trip } label: {
+                Label("填写食宿计划", systemImage: "square.and.pencil").frame(minHeight: 44)
+            }
         }.travelPanel()
     }
 }

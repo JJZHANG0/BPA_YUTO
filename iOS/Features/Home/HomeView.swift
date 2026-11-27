@@ -8,8 +8,8 @@ struct HomeView: View {
     let plan: () -> Void
     let trips: () -> Void
     let family: () -> Void
-    let profile: () -> Void
-    let provinces: () -> Void
+    let footprints: () -> Void
+    let assistance: () -> Void
 
     @Environment(TravelStore.self) private var store
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -119,26 +119,36 @@ struct HomeView: View {
                 shortcut("AI 规划", symbol: "sparkles", action: plan)
                 shortcut("行程管理", symbol: "calendar", action: trips)
                 shortcut("家人协作", symbol: "person.2", action: family)
-                shortcut("旅行偏好", symbol: "heart", action: profile)
+                shortcut("出行求助", symbol: "phone.bubble", action: assistance)
             }
-            Button(action: provinces) {
-                HStack(spacing: 10) {
-                    YutoArtwork(name: "ExplorationMap")
-                        .frame(width: 68, height: 56)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("点亮中国").font(.headline)
+            Button(action: footprints) {
+                HStack(spacing: 12) {
+                    if !typeSize.isAccessibilitySize {
+                        YutoArtwork(name: "ExplorationMap").frame(width: 88, height: 68)
+                    }
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("点亮中国").font(.system(.title3, design: .serif, weight: .bold))
                         Text("已走过 \(visitedCount) / \(catalog.provinces.count) 个省级地区")
                             .font(.subheadline).foregroundStyle(YutoTheme.muted)
+                        ProgressView(value: Double(visitedCount), total: Double(max(1, catalog.provinces.count)))
+                            .tint(YutoTheme.forest).frame(maxWidth: 140)
                     }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right").font(.footnote.weight(.medium))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "chevron.right")
+                        .font(.subheadline.weight(.semibold)).foregroundStyle(YutoTheme.forest)
+                        .frame(width: 30, height: 30)
+                        .background(YutoTheme.porcelain, in: Circle())
                 }
-                .padding(.horizontal, 14).padding(.vertical, 6)
+                .padding(.horizontal, 12).padding(.vertical, 8)
                 .foregroundStyle(YutoTheme.ink)
-                .background(YutoTheme.mist, in: RoundedRectangle(cornerRadius: YutoTheme.round))
+                .background(LinearGradient(colors: [YutoTheme.mist, YutoTheme.porcelain], startPoint: .leading, endPoint: .trailing),
+                            in: RoundedRectangle(cornerRadius: YutoTheme.round))
+                .overlay { RoundedRectangle(cornerRadius: YutoTheme.round).strokeBorder(YutoTheme.greyGreen).allowsHitTesting(false) }
+                .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .accessibilityIdentifier("explore-provinces")
+            .accessibilityHint("打开可缩放的三维省份足迹地图")
+            .accessibilityIdentifier("home-footprints")
         }
         .toolbar(.hidden, for: .navigationBar)
     }

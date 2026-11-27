@@ -133,6 +133,7 @@ struct DestinationDetailView: View {
                 .font(.headline).foregroundStyle(YutoTheme.amberInk)
                 .accessibilityAddTraits(.isHeader)
             Text(place.walkingGuide.advice).font(.body).fixedSize(horizontal: false, vertical: true)
+            TravelReadButton(text: place.shortName + "。" + place.walkingGuide.advice)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)

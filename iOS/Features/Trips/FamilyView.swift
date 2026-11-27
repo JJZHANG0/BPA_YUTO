@@ -56,6 +56,9 @@ struct FamilyView: View {
                     }.padding(.vertical, 2)
                 }.scrollIndicators(.hidden)
             }.travelPanel()
+            NavigationLink { TravelHelpView() } label: {
+                TravelMenuRow(icon: "phone.bubble", title: "出行求助", detail: "联系家人、导游或服务方").travelPanel()
+            }.buttonStyle(.plain)
             if let trip {
                 VStack(spacing: 14) {
                     Button { presentation.editing = trip } label: {

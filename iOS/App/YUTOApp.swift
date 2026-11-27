@@ -15,11 +15,13 @@ struct YUTOApp: App {
     var body: some Scene {
         WindowGroup {
             YutoEntryView()
+                .background(TravelContrastPreference(increased: store.profile.highContrast == true))
                 .environment(store)
+                .tripReminderDelivery(store: store)
                 .defaultAppStorage(defaults)
                 .preferredColorScheme(.light)
                 .tint(YutoTheme.forest)
-                .dynamicTypeSize(store.profile.largerText ? .xLarge ... .accessibility5 : .xSmall ... .accessibility5)
+                .dynamicTypeSize((store.profile.extraLargeText == true ? DynamicTypeSize.accessibility1 : store.profile.largerText ? .xLarge : .xSmall) ... .accessibility5)
         }
     }
 

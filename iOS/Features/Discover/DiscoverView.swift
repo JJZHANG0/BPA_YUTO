@@ -153,7 +153,7 @@ struct DiscoverView: View {
         .accessibilityAddTraits(favoritesOnly ? [.isSelected] : [])
         NavigationLink(value: ProvinceDirectoryRoute()) {
             filterLabel("按省浏览", icon: "map", active: false)
-        }
+        }.accessibilityIdentifier("discover-provinces")
     }
 
     private func filterLabel(_ title: String, icon: String, active: Bool) -> some View {

@@ -1,25 +1,28 @@
 import SwiftUI
 
 enum YutoTheme {
-    static let ink = color(0x19312D)
-    static let sage = color(0x246B63)
+    static let ink = color(0x19312D, highContrast: 0x071713)
+    static let sage = color(0x246B63, highContrast: 0x0A493F)
     static let forest = sage
-    static let paper = color(0xF7F5EF)
+    static let paper = color(0xF7F5EF, highContrast: 0xFFFFFF)
     static let amber = color(0xD99045)
-    static let amberInk = color(0x814818)
+    static let amberInk = color(0x814818, highContrast: 0x5F2D07)
     static let amberSurface = color(0xF8E9D7)
     static let mist = color(0xE6F1EC)
     static let greyGreen = color(0xC9D7CF)
     static let neutralGreen = color(0x8FA39B)
     static let porcelain = color(0xFFFEFA)
-    static let muted = color(0x4E625D)
-    static let divider = color(0xD9E1DA)
+    static let muted = color(0x4E625D, highContrast: 0x233C35)
+    static let divider = color(0xD9E1DA, highContrast: 0x72837B)
     static let round: CGFloat = 16
 
-    private static func color(_ rgb: UInt32) -> Color {
-        Color(red: Double((rgb >> 16) & 255) / 255,
-              green: Double((rgb >> 8) & 255) / 255,
-              blue: Double(rgb & 255) / 255)
+    private static func color(_ rgb: UInt32, highContrast: UInt32? = nil) -> Color {
+        Color(uiColor: UIColor { traits in
+            let value = traits.accessibilityContrast == .high ? highContrast ?? rgb : rgb
+            return UIColor(red: CGFloat((value >> 16) & 255) / 255,
+                           green: CGFloat((value >> 8) & 255) / 255,
+                           blue: CGFloat(value & 255) / 255, alpha: 1)
+        })
     }
 }
 

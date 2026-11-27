@@ -7,6 +7,7 @@ struct TravelPreferences {
         case profile = "yuto.native.profile"
         case trips = "yuto.native.trips"
         case reviews = "yuto.native.destinationReviews"
+        case manualFootprints = "yuto.native.manualFootprints"
         case favorites = "yuto.native.favorites"
         case companions = "yuto.native.companions"
     }
@@ -25,5 +26,17 @@ struct TravelPreferences {
 private extension UserDefaults {
     func data(forKey key: TravelPreferences.Key) -> Data? {
         data(forKey: key.rawValue)
+    }
+}
+
+enum TripAlbumFiles {
+    static func directory(for tripID: UUID) -> URL {
+        URL.applicationSupportDirectory.appending(path: "TripAlbums", directoryHint: .isDirectory)
+            .appending(path: tripID.uuidString, directoryHint: .isDirectory)
+    }
+
+    static func items(for tripID: UUID) -> [URL] {
+        let urls = (try? FileManager.default.contentsOfDirectory(at: directory(for: tripID), includingPropertiesForKeys: nil)) ?? []
+        return urls.filter { $0.pathExtension == "jpg" }.sorted { $0.lastPathComponent > $1.lastPathComponent }
     }
 }

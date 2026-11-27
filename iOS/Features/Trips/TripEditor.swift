@@ -35,6 +35,14 @@ struct TripEditor: View {
                     Toggle("安排更多休息日", isOn: $trip.slow)
                 } header: { Text("日期与节奏").foregroundStyle(YutoTheme.muted) }
                     .listRowBackground(YutoTheme.porcelain)
+                Section("食宿计划") {
+                    TextField("住宿名称或要求", text: Binding(
+                        get: { trip.lodgingPlan ?? "" }, set: { trip.lodgingPlan = String($0.prefix(160)) }
+                    ), axis: .vertical)
+                    TextField("餐厅或用餐安排", text: Binding(
+                        get: { trip.mealPlan ?? "" }, set: { trip.mealPlan = String($0.prefix(160)) }
+                    ), axis: .vertical)
+                }.listRowBackground(YutoTheme.porcelain)
             }
             .scrollContentBackground(.hidden)
             .background(YutoTheme.paper)

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct YutoTabs: View {
-    private enum HomeRoute: Hashable { case planner, preferences }
+    private enum HomeRoute: Hashable { case planner, footprints, assistance }
 
     @Environment(TravelStore.self) private var store
     @State private var tab = Tab.home
@@ -15,17 +15,19 @@ struct YutoTabs: View {
         @Bindable var presentation = presentation
         Group {
             if let catalog = store.catalog {
-                let visited = catalog.visitedProvinces(in: store.trips)
+                let visited = store.visitedProvinces(in: catalog)
                 TabView(selection: $tab) {
                     NavigationStack(path: $homePath) {
                         HomeView(catalog: catalog, visitedCount: visited.count, query: $homeQuery,
                                  search: searchFromHome, plan: { homePath.append(HomeRoute.planner) },
                                  trips: { tab = .trips }, family: { tab = .family },
-                                 profile: { homePath.append(HomeRoute.preferences) }, provinces: openProvinces)
+                                 footprints: { homePath.append(HomeRoute.footprints) },
+                                 assistance: { homePath.append(HomeRoute.assistance) })
                             .navigationDestination(for: HomeRoute.self) { route in
                                 switch route {
                                 case .planner: PlannerView(catalog: catalog)
-                                case .preferences: ProfilePreferencesView()
+                                case .footprints: FootprintsView(catalog: catalog)
+                                case .assistance: TravelHelpView()
                                 }
                             }
                     }
@@ -57,13 +59,6 @@ struct YutoTabs: View {
     private func searchFromHome() {
         discoverPath = NavigationPath()
         discoverQuery = homeQuery
-        tab = .discover
-    }
-
-    private func openProvinces() {
-        discoverQuery = ""
-        discoverPath = NavigationPath()
-        discoverPath.append(ProvinceDirectoryRoute())
         tab = .discover
     }
 }

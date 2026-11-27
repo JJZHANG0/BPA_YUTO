@@ -38,6 +38,12 @@ struct PlannerView: View {
                             .font(.body).lineSpacing(4).travelPanel()
                     }
                     if replies.isEmpty && !examples.isEmpty {
+                        if tripID == nil {
+                            Button(action: suggestUsingProfile) {
+                                Label("按我的偏好推荐路线", systemImage: "figure.walk")
+                                    .frame(maxWidth: .infinity)
+                            }.buttonStyle(YutoButtonStyle(primary: false))
+                        }
                         Text("您可以这样告诉我").font(.headline)
                         ForEach(examples, id: \.self) { prompt in
                             Button { send(prompt) } label: {
@@ -115,6 +121,19 @@ struct PlannerView: View {
                 } label: { Image(systemName: "ellipsis.circle") }.accessibilityLabel("规划选项")
             }
         }
+    }
+
+    private func suggestUsingProfile() {
+        guard let trip = TripPlanner.suggestedTrip(in: catalog, profile: store.profile, favorites: store.favorites),
+              let destination = catalog.destination(trip.destination) else {
+            replies.append(PlannerExchange(request: "按我的偏好推荐路线", message: "现有目录里还没有符合这些条件的路线。您可以换个城市试试。", draft: nil))
+            return
+        }
+        let origin = store.favorites.contains(destination.id) ? "从您收藏的" : "从"
+        var reason = origin + destination.shortName + "出发，建议先安排" + String(trip.days) + "天，每天最多一处景点。"
+        if trip.slow { reason += "给休息和自由活动留出整天时间。" }
+        if store.profile.wheelchair { reason += "出发前请向景区确认轮椅可走的入口和路线。" }
+        replies.append(PlannerExchange(request: "按我的偏好推荐路线", message: reason, draft: trip))
     }
 
     private func send(_ input: String) {

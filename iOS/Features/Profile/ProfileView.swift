@@ -52,6 +52,9 @@ struct ProfileView: View {
                     TravelMenuRow(icon: "person.2", title: "常用出行人", detail: "家人、朋友与同行旅伴")
                 }.buttonStyle(.plain)
             }.travelPanel()
+            NavigationLink { TravelHelpView() } label: {
+                TravelMenuRow(icon: "phone.bubble", title: "出行求助", detail: "拨打已存号码，分享我的位置").travelPanel()
+            }.buttonStyle(.plain)
             if !saved.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("收藏的目的地").font(.headline)
@@ -97,6 +100,20 @@ struct ProfilePreferencesView: View {
             } header: { Text("出行习惯") } footer: {
                 Text("这些偏好保存在本机，帮您匹配目的地和安排行程。")
             }.listRowBackground(YutoTheme.porcelain)
+            Section {
+                Picker("饮食偏好", selection: Binding(
+                    get: { store.profile.dietPreference ?? "无特别偏好" },
+                    set: { store.profile.dietPreference = $0 }
+                )) {
+                    ForEach(["无特别偏好", "清淡", "软食", "素食"], id: \.self) { Text($0) }
+                }
+                TextField("其他出行需要（选填）", text: Binding(
+                    get: { store.profile.mobilityNote ?? "" },
+                    set: { store.profile.mobilityNote = String($0.prefix(240)) }
+                ), axis: .vertical).lineLimit(1...4)
+            } header: { Text("饮食与照护") } footer: {
+                Text("可记下希望家人协助的事项。这些信息只保存在本机。")
+            }.listRowBackground(YutoTheme.porcelain)
         }.scrollContentBackground(.hidden).background(YutoTheme.paper)
         .navigationTitle("我的旅行偏好").navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
@@ -109,13 +126,28 @@ private struct ProfileSettingsView: View {
     var body: some View {
         @Bindable var store = store
         Form {
-            Toggle("使用更大字号", isOn: $store.profile.largerText)
+            Section("阅读与显示") {
+                Picker("文字大小", selection: Binding(
+                    get: { store.profile.extraLargeText == true ? 2 : store.profile.largerText ? 1 : 0 },
+                    set: { size in
+                        store.profile.extraLargeText = size == 2
+                        store.profile.largerText = size >= 1
+                    }
+                )) {
+                    Text("跟随系统").tag(0)
+                    Text("大字").tag(1)
+                    Text("特大字").tag(2)
+                }
+                Toggle("高对比度", isOn: Binding(get: { store.profile.highContrast == true }, set: { store.profile.highContrast = $0 }))
+                Toggle("显示朗读按钮", isOn: Binding(get: { store.profile.readAloud ?? true }, set: { store.profile.readAloud = $0 }))
+                TravelReadButton(text: "这是悠途的中文朗读。您可以在景区详情和行程中点按朗读。")
+            }
             NavigationLink("图片授权") { PhotoLicensesView() }
-            Button("清除旅行画像", role: .destructive) { clear = true }
+            Button("清除旅行画像与联系人", role: .destructive) { clear = true }
         }.scrollContentBackground(.hidden).background(YutoTheme.paper)
         .navigationTitle("显示与隐私").navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
-        .alert("清除旅行画像？", isPresented: $clear) {
+        .alert("清除旅行画像与本机求助联系人？", isPresented: $clear) {
             Button("清除", role: .destructive) { store.profile = Profile() }
             Button("取消", role: .cancel) {}
         }

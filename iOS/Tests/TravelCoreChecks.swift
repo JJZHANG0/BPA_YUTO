@@ -17,9 +17,15 @@ struct TravelCoreChecks {
         let preferences = TravelPreferences(defaults: defaults)
         let store = TravelStore(catalog: catalog, preferences: preferences)
 
+        let oldProfile = try JSONDecoder().decode(Profile.self, from: Data(#"{"nickname":"老赵","age":"65–74岁","wheelchair":false,"shortWalk":true,"restOften":false,"slowPace":true,"largerText":true}"#.utf8))
+        precondition(oldProfile.nickname == "老赵" && oldProfile.largerText && oldProfile.helpContacts == nil)
+        precondition(HelpContact.dialableNumber("+86 (139) 0000-0000") == "+8613900000000")
+        precondition(HelpContact.dialableNumber("12#3") == nil)
         let results = DestinationMatcher.search("想去浙江旅游，不爬山", in: catalog, province: "", city: "", profile: store.profile)
         precondition(!results.isEmpty && results.allSatisfy { $0.province == "浙江" })
         let first = catalog.attractions.first { $0.name == "西湖风景名胜区" }!
+        let recommended = TripPlanner.suggestedTrip(in: catalog, profile: oldProfile, favorites: [first.id])
+        precondition(recommended?.destination == first.id && recommended?.days == 2 && recommended?.itinerary?.last == .rest)
         let trip = Trip(destination: first.id, days: 4, slow: true)
         store.saveTrip(trip)
         let saved = store.trips[0].itinerary!
@@ -34,6 +40,20 @@ struct TravelCoreChecks {
         store.toggleCompletion(trip.id)
         precondition(catalog.visitedProvinces(in: store.trips) == ["浙江"])
         precondition(first.shortName == "杭州西湖" && first.scoreCaption == "AI预估 86 分")
+        store.markProvince("四川")
+        store.markProvince("浙江")
+        store.markProvince("非省份")
+        let footprints = TravelStore(catalog: catalog, preferences: preferences)
+        precondition(footprints.visitedProvinces(in: catalog) == ["四川", "浙江"])
+        footprints.removeManualFootprint("浙江")
+        precondition(footprints.manualFootprints["浙江"] != nil)
+        footprints.removeManualFootprint("四川")
+        let afterUndo = TravelStore(catalog: catalog, preferences: preferences)
+        precondition(afterUndo.visitedProvinces(in: catalog) == ["浙江"])
+        afterUndo.toggleCompletion(trip.id)
+        afterUndo.removeManualFootprint("浙江")
+        precondition(afterUndo.visitedProvinces(in: catalog).isEmpty)
+        afterUndo.toggleCompletion(trip.id)
         var edited = store.trips[0]
         store.addCompanion(name: " 妈妈 ", role: "家人")
         store.addFamilyNote(" 午后休息 ", to: edited.id)
@@ -87,6 +107,25 @@ struct TravelCoreChecks {
         precondition(migrated.trips[0].itinerary?.count == 4)
         let persisted = preferences.load(.trips, default: [Trip]())
         precondition(persisted.first?.itinerary == migrated.trips[0].itinerary)
+        var futureTrip = Trip(destination: first.id)
+        futureTrip.date = Calendar.current.date(byAdding: .day, value: 3, to: .now)!
+        futureTrip.lodgingPlan = "住在湖边"
+        futureTrip.mealPlan = "和家人一起午餐"
+        migrated.saveTrip(futureTrip)
+        let reminder = TripReminder(kind: .meet, day: 2, hour: 10, minute: 15, voice: false)
+        precondition(migrated.saveReminder(reminder, for: futureTrip.id))
+        migrated.toggleSavedRoute(futureTrip.id)
+        let initialTime = reminder.date(for: futureTrip)!
+        futureTrip.date = Calendar.current.date(byAdding: .day, value: 1, to: futureTrip.date)!
+        migrated.saveTrip(futureTrip)
+        let recovered = TravelStore(catalog: catalog, preferences: preferences).trips.first { $0.id == futureTrip.id }!
+        precondition(recovered.reminders == [reminder] && recovered.savedRoute == true)
+        precondition(recovered.mealPlan == futureTrip.mealPlan && recovered.lodgingPlan == futureTrip.lodgingPlan)
+        precondition(Calendar.current.dateComponents([.day], from: initialTime, to: reminder.date(for: recovered)!).day == 1)
+        futureTrip.days = 1
+        precondition(reminder.date(for: futureTrip) == nil)
+        migrated.removeReminder(reminder.id, from: futureTrip.id)
+        precondition(migrated.trips.first { $0.id == futureTrip.id }?.reminders?.isEmpty == true)
         print("通过：离线目录、目的地匹配、行程规则、数据持久化和旧版行程迁移")
     }
 }

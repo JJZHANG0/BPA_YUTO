@@ -12,6 +12,10 @@ struct Trip: Codable, Identifiable {
     var itinerary: [TripDay]?
     var familyNotes: [FamilyNote]?
     var expenses: [TripExpense]?
+    var reminders: [TripReminder]?
+    var savedRoute: Bool?
+    var lodgingPlan: String?
+    var mealPlan: String?
 
     func hasSameSchedule(as other: Trip) -> Bool {
         destination == other.destination && days == other.days && slow == other.slow && itinerary == other.itinerary
@@ -45,4 +49,42 @@ struct TravelCompanion: Codable, Identifiable {
     var id = UUID()
     let name: String
     let role: String
+}
+
+enum TripReminderKind: String, Codable, CaseIterable, Identifiable {
+    case depart = "出发", meet = "集合", meal = "用餐", returnHome = "返程"
+    var id: Self { self }
+
+    var icon: String {
+        switch self {
+        case .depart: "suitcase.rolling"
+        case .meet: "person.2"
+        case .meal: "fork.knife"
+        case .returnHome: "house"
+        }
+    }
+
+    var soundName: String {
+        switch self {
+        case .depart: "yuto-depart.caf"
+        case .meet: "yuto-meet.caf"
+        case .meal: "yuto-meal.caf"
+        case .returnHome: "yuto-return.caf"
+        }
+    }
+}
+
+struct TripReminder: Identifiable, Codable, Equatable {
+    var id = UUID()
+    var kind: TripReminderKind
+    var day: Int
+    var hour: Int
+    var minute: Int
+    var voice: Bool
+
+    func date(for trip: Trip, calendar: Calendar = .current) -> Date? {
+        guard (1...max(1, trip.days)).contains(day), (0..<24).contains(hour), (0..<60).contains(minute),
+              let date = calendar.date(byAdding: .day, value: day - 1, to: calendar.startOfDay(for: trip.date)) else { return nil }
+        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date)
+    }
 }

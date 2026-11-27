@@ -22,6 +22,10 @@ final class TravelStore {
         didSet { preferences.save(companions, for: .companions) }
     }
 
+    private(set) var manualFootprints: [String: Date] {
+        didSet { preferences.save(manualFootprints, for: .manualFootprints) }
+    }
+
     init(catalog: Catalog?, preferences: TravelPreferences = TravelPreferences()) {
         self.catalog = catalog
         self.preferences = preferences
@@ -30,6 +34,7 @@ final class TravelStore {
         reviews = preferences.load(.reviews, default: [])
         favorites = preferences.load(.favorites, default: [])
         companions = preferences.load(.companions, default: [])
+        manualFootprints = preferences.load(.manualFootprints, default: [:])
         trips = preferences.load(.trips, default: [Trip]())
         if let catalog {
             let needsMigration = trips.contains { $0.itinerary == nil && catalog.destination($0.destination) != nil }
@@ -44,6 +49,20 @@ final class TravelStore {
                 preferences.save(trips, for: .trips)
             }
         }
+    }
+
+    func visitedProvinces(in catalog: Catalog) -> Set<String> {
+        catalog.visitedProvinces(in: trips).union(manualFootprints.keys).intersection(catalog.provinces)
+    }
+
+    func markProvince(_ province: String) {
+        guard catalog?.provinces.contains(province) == true, manualFootprints[province] == nil else { return }
+        manualFootprints[province] = .now
+    }
+
+    func removeManualFootprint(_ province: String) {
+        guard let catalog, !catalog.visitedProvinces(in: trips).contains(province) else { return }
+        manualFootprints.removeValue(forKey: province)
     }
 
     @discardableResult
@@ -70,6 +89,8 @@ final class TravelStore {
         if let existing {
             updated.familyNotes = existing.familyNotes
             updated.expenses = existing.expenses
+            updated.reminders = existing.reminders
+            updated.savedRoute = existing.savedRoute
         }
         if let existing, existing.destination == trip.destination,
            existing.days == trip.days, existing.slow == trip.slow,
@@ -106,6 +127,30 @@ final class TravelStore {
         return true
     }
 
+    func toggleSavedRoute(_ tripID: UUID) {
+        guard let index = trips.firstIndex(where: { $0.id == tripID }) else { return }
+        trips[index].savedRoute = trips[index].savedRoute != true
+    }
+
+    @discardableResult
+    func saveReminder(_ reminder: TripReminder, for tripID: UUID) -> Bool {
+        guard let index = trips.firstIndex(where: { $0.id == tripID }),
+              !trips[index].complete, let date = reminder.date(for: trips[index]), date > .now else { return false }
+        var items = trips[index].reminders ?? []
+        if let offset = items.firstIndex(where: { $0.id == reminder.id }) {
+            items[offset] = reminder
+        } else {
+            items.append(reminder)
+        }
+        trips[index].reminders = items
+        return true
+    }
+
+    func removeReminder(_ reminderID: UUID, from tripID: UUID) {
+        guard let index = trips.firstIndex(where: { $0.id == tripID }) else { return }
+        trips[index].reminders?.removeAll { $0.id == reminderID }
+    }
+
     func addExpense(label: String, amount: String, to tripID: UUID) {
         let label = label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !label.isEmpty, label.count <= 30, let cents = TripExpense.cents(from: amount),
@@ -121,6 +166,7 @@ final class TravelStore {
     }
 
     func deleteTrip(_ id: UUID) {
+        try? FileManager.default.removeItem(at: TripAlbumFiles.directory(for: id))
         trips.removeAll { $0.id == id }
     }
 

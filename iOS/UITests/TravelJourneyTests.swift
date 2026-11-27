@@ -9,9 +9,7 @@ final class TravelJourneyTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["discover-title"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["收藏鼓浪屿"].exists)
         capture(app, name: "02-Discover")
-        app.tabBars.buttons["首页"].tap()
-
-        let explore = app.buttons["explore-provinces"]
+        let explore = app.buttons["discover-provinces"]
         reveal(explore, in: app)
         explore.tap()
         let province = app.buttons["province-上海"]
@@ -222,6 +220,94 @@ final class TravelJourneyTests: XCTestCase {
         capture(app, name: "19-Discover-LargeText")
     }
 
+    func testExploreModelAndPersistFootprints() {
+        let app = launchFresh()
+        let entry = app.buttons["home-footprints"]
+        reveal(entry, in: app)
+        entry.tap()
+        XCTAssertTrue(app.staticTexts["footprints-title"].waitForExistence(timeout: 12))
+        let map = app.descendants(matching: .any)["province-scene"].firstMatch
+        XCTAssertTrue(map.waitForExistence(timeout: 8))
+        capture(app, name: "Footprints-FullMap")
+        let memory = app.buttons["footprint-memory"]
+        let startingPlace = memory.label
+        for offset in [CGVector(dx: 0.25, dy: 0.45), CGVector(dx: 0.4, dy: 0.53), CGVector(dx: 0.53, dy: 0.55)] where memory.label == startingPlace {
+            map.coordinate(withNormalizedOffset: offset).tap()
+        }
+        XCTAssertNotEqual(memory.label, startingPlace, "点按立体省块应切换记忆卡")
+        map.pinch(withScale: 1.6, velocity: 1)
+        let center = map.coordinate(withNormalizedOffset: CGVector(dx: 0.50, dy: 0.50))
+        center.press(forDuration: 0.1, thenDragTo: map.coordinate(withNormalizedOffset: CGVector(dx: 0.72, dy: 0.56)))
+        app.buttons["缩小地图"].tap()
+        app.buttons["放大地图"].tap()
+        app.buttons["回到全图"].tap()
+        app.buttons["footprint-provinces"].tap()
+        let sichuan = app.buttons["footprint-select-四川"]
+        reveal(sichuan, in: app)
+        sichuan.tap()
+        for _ in 0..<3 { app.buttons["放大地图"].tap() }
+        XCTAssertTrue(memory.label.contains("四川"))
+        capture(app, name: "Footprints-SichuanDetail")
+        app.buttons["回到全图"].tap()
+        app.buttons["footprint-provinces"].tap()
+        let xinjiang = app.buttons["footprint-select-新疆"]
+        if !xinjiang.isHittable {
+            let search = app.searchFields.firstMatch
+            if search.exists { search.tap(); search.typeText("新疆") }
+            else { reveal(xinjiang, in: app) }
+        }
+        xinjiang.tap()
+        let mark = app.buttons["footprint-mark"]
+        reveal(mark, in: app)
+        mark.tap()
+        let progress = app.descendants(matching: .any)["footprint-progress"].firstMatch
+        XCTAssertTrue((progress.value as? String)?.contains("已点亮 1 个") == true)
+        capture(app, name: "Footprints-Lit")
+        app.buttons["footprint-memory"].tap()
+        XCTAssertTrue(app.navigationBars["旅行记忆"].waitForExistence(timeout: 5))
+        capture(app, name: "Footprints-Memories")
+        app.terminate()
+        app.launch()
+        reveal(entry, in: app)
+        entry.tap()
+        XCTAssertTrue(progress.waitForExistence(timeout: 8))
+        XCTAssertTrue((progress.value as? String)?.contains("已点亮 1 个") == true)
+        app.buttons["footprint-memory"].tap()
+        let remove = app.buttons["footprint-unmark"]
+        reveal(remove, in: app)
+        remove.tap()
+        app.buttons["撤销点亮"].tap()
+        app.buttons["关闭"].tap()
+        XCTAssertTrue((progress.value as? String)?.contains("已点亮 0 个") == true)
+    }
+
+    func testContactAndReadingPreferences() {
+        let app = launchFresh()
+        app.buttons["出行求助"].tap()
+        app.buttons["添加求助联系人"].tap()
+        let name = app.textFields["姓名或称呼"]
+        name.tap()
+        name.typeText("家人")
+        let phone = app.textFields["电话号码"]
+        phone.tap()
+        phone.typeText("5550100")
+        app.buttons["保存"].tap()
+        XCTAssertTrue(app.buttons["拨打家人"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["我的"].tap()
+        app.buttons["显示与隐私设置"].tap()
+        let contrast = app.switches["高对比度"]
+        XCTAssertTrue(contrast.waitForExistence(timeout: 5))
+        contrast.coordinate(withNormalizedOffset: CGVector(dx: 0.90, dy: 0.5)).tap()
+        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "1"), object: contrast)
+        XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 4), .completed)
+        app.switches["显示朗读按钮"].coordinate(withNormalizedOffset: CGVector(dx: 0.90, dy: 0.5)).tap()
+        XCTAssertFalse(app.buttons["朗读"].exists)
+        app.terminate()
+        app.launch()
+        app.buttons["出行求助"].tap()
+        XCTAssertTrue(app.buttons["拨打家人"].exists)
+    }
+
     private func launchFresh(captureWelcome: Bool = false) -> XCUIApplication {
         continueAfterFailure = false
         let app = XCUIApplication()
@@ -248,5 +334,49 @@ final class TravelJourneyTests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+}
+
+extension TravelJourneyTests {
+    func testTripToolsBookmarkAlbumAndScheduledReminder() throws {
+        let app = launchFresh()
+        app.tabBars.buttons["行程"].tap()
+        let create = app.buttons["创建旅行计划"]
+        reveal(create, in: app)
+        create.tap()
+        app.buttons["保存计划"].tap()
+
+        let bookmark = app.buttons["收藏这条路线"]
+        XCTAssertTrue(bookmark.waitForExistence(timeout: 6))
+        bookmark.tap()
+        app.buttons["查看收藏路线"].tap()
+        XCTAssertTrue(app.staticTexts["杭州西湖"].waitForExistence(timeout: 5))
+        app.staticTexts["杭州西湖"].tap()
+
+        let album = app.buttons["trip-album"]
+        reveal(album, in: app)
+        album.tap()
+        XCTAssertTrue(app.buttons["添加旅行照片"].waitForExistence(timeout: 5))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        let reminders = app.buttons["trip-reminders"]
+        reveal(reminders, in: app)
+        reminders.tap()
+        app.buttons["add-trip-reminder"].tap()
+        // Use point-in-time system sound delivery; voice generation depends on the selected iOS voice.
+        let voice = app.switches["使用语音提醒"]
+        XCTAssertTrue(voice.waitForExistence(timeout: 5))
+        if voice.value as? String == "1" { voice.tap() }
+        app.buttons["保存提醒"].tap()
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let allow = springboard.alerts.buttons.matching(NSPredicate(format: "label IN %@", ["允许", "Allow"])).firstMatch
+        if allow.waitForExistence(timeout: 4) { allow.tap() }
+        let row = app.buttons["trip-reminder-row"]
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        let scheduled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value CONTAINS %@", "已安排"), object: row)
+        XCTAssertEqual(XCTWaiter.wait(for: [scheduled], timeout: 8), .completed)
+        row.tap()
+        app.buttons["删除这条提醒"].tap()
+        XCTAssertFalse(row.exists)
     }
 }
